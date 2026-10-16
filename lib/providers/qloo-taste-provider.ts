@@ -20,10 +20,10 @@ export const qlooTasteProvider: TasteProvider = {
       })),
     ];
     const seeds: Entity[] = [];
-    // Batches of three bound concurrency. Every preference is resolved, at most 12 searches.
-    for (let offset = 0; offset < queries.length; offset += 3) {
+    // Resolve sequentially to avoid bursts; transport shares and caches repeat queries.
+    for (let offset = 0; offset < queries.length; offset += 1) {
       const batch = await Promise.all(
-        queries.slice(offset, offset + 3).map(async ({ query, types }) => {
+        queries.slice(offset, offset + 1).map(async ({ query, types }) => {
           const response = await client.get(
             "/search",
             { query, types, take: "5" },

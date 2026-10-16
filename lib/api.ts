@@ -73,12 +73,18 @@ export async function handleTasteRequest(request: Request) {
           ? e.message
           : "The taste workflow could not complete. Please retry.";
     return NextResponse.json(
-      { error },
+      { error, code: e instanceof ServiceError ? e.code : "request_error" },
       {
         status,
         headers: {
           ...headers,
-          ...(status === 429 ? { "Retry-After": "60" } : {}),
+          ...(status === 429
+            ? {
+                "Retry-After": String(
+                  e instanceof ServiceError ? (e.retryAfter ?? 60) : 60,
+                ),
+              }
+            : {}),
         },
       },
     );

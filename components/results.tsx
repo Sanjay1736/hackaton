@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { requestRecommendations } from "@/lib/recommendation-request";
 import {
   ArrowUpRight,
   ArrowRight,
@@ -61,18 +62,8 @@ export function Results({
           setResult(cached.data);
           return;
         }
-        const response = await fetch("/api/recommendations", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(input),
-          signal,
-        });
-        const json = await response.json();
-        if (!response.ok)
-          throw new Error(
-            json.error || "Could not create your recommendations.",
-          );
-        const parsed = resultSchema.parse(json);
+        const parsed = await requestRecommendations(input, mode);
+        if (signal?.aborted) return;
         setResult(parsed);
         try {
           sessionStorage.setItem("tasteweave-result", JSON.stringify(parsed));

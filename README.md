@@ -96,7 +96,7 @@ Feedback entries contain `id` and one of `Not my taste`, `Already familiar`, or 
 ## Request limits and security
 
 - Six entries per category, 80 characters per entry, 24 exclusions, 16 KB streamed request-body cap.
-- At most 12 seed searches and four Insights calls; search concurrency three, three results per output category.
+- At most 12 seed searches and four Insights calls; sequential upstream requests per server instance, three results per output category.
 - Eight-second per-call timeout and a 25-second overall live retrieval deadline; redirects rejected, no automatic retry amplification.
 - Three active workflows and 20 requests/minute **per server instance**. This is not a distributed abuse limiter. Configure deployment-level limits for a public live demo.
 - Exact-name resolution excludes ambiguous/missing matches instead of guessing. Missing results are never fabricated.
@@ -147,3 +147,5 @@ Read [Qloo contract notes](docs/QLOO.md), [Devpost draft](docs/DEVPOST.md), and 
 ### Repeat the live smoke test
 
 With a real server-side key in `.env.local`, run `npm run verify:live`. This opt-in test consumes real Qloo quota (two workflows, each with Search and four category Insights requests). It is excluded from `npm test` and CI. Never publish credentials or captured response data.
+
+Qloo requests now share in-flight work and cache validated responses for five minutes (maximum 256 entries, credential-scoped). HTTP 429 establishes an instance-local cooldown using `Retry-After`; no automatic retry is scheduled. See [rate-limit diagnosis](docs/RATE-LIMIT-DIAGNOSIS.md) for evidence and deployment limits.

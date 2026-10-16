@@ -168,3 +168,33 @@ test("damaged cached results do not block a fresh discovery", async ({
     page.getByRole("heading", { name: "Khruangbin", exact: true }),
   ).toBeVisible();
 });
+
+test("rate-limit retry clicks do not send more requests during Retry-After", async ({
+  page,
+}) => {
+  let requests = 0;
+  await page.route("**/api/recommendations", async (route) => {
+    requests++;
+    await route.fulfill({
+      status: 429,
+      headers: { "Retry-After": "120" },
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: "Qloo is rate limiting requests. Try again in 120 seconds.",
+      }),
+    });
+  });
+  await page.goto("/discover");
+  await page
+    .getByRole("button", { name: "Use the example taste profile" })
+    .click();
+  await page.getByRole("button", { name: "Weave My Taste DNA" }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText(
+    "120 seconds",
+  );
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText(
+    "120 seconds",
+  );
+  expect(requests).toBe(1);
+});

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { QlooClient } from "../lib/qloo/client";
+import { QlooClient, resetQlooStateForTests } from "../lib/qloo/client";
 import { searchResponseSchema } from "../lib/qloo/types";
 import { qlooTasteProvider } from "../lib/providers/qloo-taste-provider";
 import { defaultInput } from "../lib/schema";
@@ -13,6 +13,7 @@ const entity = {
   subtype: "urn:entity:artist",
 };
 beforeEach(() => {
+  resetQlooStateForTests();
   vi.stubEnv("QLOO_API_KEY", "test-placeholder");
   vi.stubEnv("QLOO_BASE_URL", "https://hackathon.api.qloo.com");
 });
@@ -199,7 +200,11 @@ it("handles documented no-search-results and invalid JSON separately", async () 
     await new QlooClient().get("/search", {}, searchResponseSchema),
   ).toEqual({ success: true, results: [] });
   await expect(
-    new QlooClient().get("/search", {}, searchResponseSchema),
+    new QlooClient().get(
+      "/search",
+      { query: "different" },
+      searchResponseSchema,
+    ),
   ).rejects.toThrow("invalid JSON");
 });
 it("keeps styling context out of all Qloo requests and forwards a bounded signal", async () => {
@@ -230,26 +235,24 @@ it("keeps styling context out of all Qloo requests and forwards a bounded signal
 });
 
 it("accepts the verified hackathon search shape without a success field", async () => {
-  const fetch = vi
-    .fn()
-    .mockImplementation(
-      async (url: URL) =>
-        new Response(
-          JSON.stringify(
-            url.pathname === "/search"
-              ? {
-                  results: [
-                    {
-                      entity_id: id,
-                      name: "Sade",
-                      types: ["urn:entity:artist"],
-                    },
-                  ],
-                }
-              : { success: true, results: { entities: [] } },
-          ),
+  const fetch = vi.fn().mockImplementation(
+    async (url: URL) =>
+      new Response(
+        JSON.stringify(
+          url.pathname === "/search"
+            ? {
+                results: [
+                  {
+                    entity_id: id,
+                    name: "Sade",
+                    types: ["urn:entity:artist"],
+                  },
+                ],
+              }
+            : { success: true, results: { entities: [] } },
         ),
-    );
+      ),
+  );
   vi.stubGlobal("fetch", fetch);
   const result = await qlooTasteProvider.retrieve({
     ...defaultInput,
